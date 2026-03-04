@@ -3,6 +3,15 @@
 Claude Code에서 슬래시 커맨드(`/`)로 QA 테스트를 자동 실행하는 시스템입니다.
 URL을 주면 Claude가 Playwright 브라우저로 직접 테스트합니다.
 
+## 주요 기능
+
+- URL만 입력하면 자동으로 페이지 분석 후 테스트
+- 구글 스프레드시트에서 테스트 케이스 읽기 + 결과 자동 기록
+- 실패 시 자동 스크린샷 캡처
+- 로그인 세션 재사용 (같은 도메인 내 반복 로그인 방지)
+- HTML/Markdown 리포트 자동 생성
+- 테스트 실행 이력 누적 관리
+
 ## 설치
 
 ```bash
@@ -19,7 +28,7 @@ chmod +x install.sh
 ### `/qa-test` — 테스트 실행
 
 ```
-# URL만 → 페이지 자동 분석 후 테스트
+# URL만 → 페이지 자동 분석 후 3~7개 테스트 생성/실행
 /qa-test https://workb.net
 
 # URL + 지시사항 → 특정 시나리오 테스트
@@ -68,6 +77,48 @@ chmod +x install.sh
 ```
 /qa-validate test-cases/auth/login-valid.md
 ```
+
+## 테스트 결과
+
+테스트 실행 후 자동으로 `test-results/` 폴더에 저장됩니다:
+
+```
+test-results/
+├── history.md                         ← 전체 실행 이력
+├── 2026-03-03-sheet-report.md         ← Markdown 리포트
+├── 2026-03-03-sheet-report.html       ← HTML 리포트 (브라우저에서 열기)
+└── screenshots/
+    ├── WB-C-019-step1-1709420000.png  ← 실패 시 자동 캡처
+    └── WB-C-072-step2-1709420100.png
+```
+
+### HTML 리포트 예시
+
+브라우저에서 열면 깔끔한 대시보드 형태로 결과를 확인할 수 있습니다:
+- 요약 카드 (Total / Passed / Failed / Pass Rate)
+- 테스트별 결과 테이블
+- 실패 항목 상세 (기대결과, 실제결과, 스크린샷)
+
+## 구글 시트 결과 자동 기록 (선택)
+
+테스트 결과를 구글 시트에 자동으로 기록하려면:
+
+### 1. Apps Script 배포
+
+1. 테스트할 구글 스프레드시트에서 **[확장 프로그램] → [Apps Script]**
+2. `google-apps-script.js` 내용을 복사 → 붙여넣기
+3. **[배포] → [새 배포] → [웹 앱]**
+   - 실행 주체: "나"
+   - 액세스 권한: "모든 사용자"
+4. 배포 후 나오는 URL 복사
+
+### 2. qa-config.md에 URL 추가
+
+```markdown
+| SHEET_WEBHOOK_URL | https://script.google.com/macros/s/xxx/exec |
+```
+
+이후 `/qa-sheet` 실행 시 자동으로 시트에 PASS/FAIL 결과가 기록됩니다.
 
 ## 테스트 케이스 형식
 
@@ -127,6 +178,7 @@ chmod +x install.sh
 | BASE_URL | https://workb.net |
 | TEST_USER_EMAIL | test@example.com |
 | TEST_USER_PASSWORD | $ENV:QA_TEST_PASSWORD |
+| SHEET_WEBHOOK_URL | https://script.google.com/macros/s/xxx/exec |
 ```
 
 - `$ENV:변수명` → 시스템 환경변수에서 읽음 (비밀번호, 토큰 등)
@@ -136,16 +188,17 @@ chmod +x install.sh
 
 ```
 qa-automation-agent/
-├── README.md              ← 이 문서
-├── install.sh             ← 원클릭 설치 스크립트
-├── commands/              ← 슬래시 커맨드 원본
+├── README.md                ← 이 문서
+├── install.sh               ← 원클릭 설치 스크립트
+├── google-apps-script.js    ← 시트 자동기록용 Apps Script
+├── commands/                ← 슬래시 커맨드 원본
 │   ├── qa-test.md
 │   ├── qa-sheet.md
 │   ├── qa-md.md
 │   ├── qa-suite.md
 │   └── qa-validate.md
-├── qa-config.md           ← 변수 설정 예제
-└── test-cases/            ← 테스트 케이스 예제
+├── qa-config.md             ← 변수 설정 예제
+└── test-cases/              ← 테스트 케이스 예제
     ├── auth/
     │   ├── login-valid.md
     │   └── login-invalid.md
@@ -160,3 +213,17 @@ qa-automation-agent/
 2. `./install.sh` 실행
 3. Claude Code 재시작
 4. `/qa-test https://your-site.com` 입력 → 바로 테스트 시작
+
+## FAQ
+
+**Q: 슬래시 커맨드가 안 보여요**
+A: Claude Code를 완전히 종료 후 재시작하세요.
+
+**Q: 구글 시트를 못 읽어요**
+A: 시트 공유 설정이 "누구나 볼 수 있음"인지 확인하세요.
+
+**Q: 로그인이 필요한 페이지 테스트는?**
+A: 시트에 계정/비밀번호 컬럼을 추가하거나, qa-config.md에 변수로 설정하세요.
+
+**Q: HTML 리포트는 어디서 보나요?**
+A: `test-results/` 폴더의 `.html` 파일을 브라우저에서 열면 됩니다.
