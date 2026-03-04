@@ -6,7 +6,7 @@ URL을 주면 Claude가 Playwright 브라우저로 직접 테스트합니다.
 ## 설치
 
 ```bash
-git clone <this-repo-url>
+git clone nsj1101-coder/qa-automation-agent
 cd qa-automation-agent
 chmod +x install.sh
 ./install.sh
